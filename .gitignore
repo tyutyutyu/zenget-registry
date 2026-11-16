@@ -1,0 +1,12 @@
+# Local validation/temp artifacts
+.tmp/
+*.tmp
+__pycache__/
+*.pyc
+
+# Downloaded release assets from local smoke runs
+*.tar.gz
+*.tgz
+*.tar.xz
+*.tar.bz2
+*.zip

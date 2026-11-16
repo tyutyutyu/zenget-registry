@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "repository": "jqlang/jq",
+      "path": "recipes/jqlang/jq.json",
+      "sha256": "7af6d0e372b313fef5e6f7e066c48614672445bcc2a5d188a0304b730b050522"
+    },
+    {
+      "repository": "junegunn/fzf",
+      "path": "recipes/junegunn/fzf.json",
+      "sha256": "d35acae5f36968762a91a2088dc2f2a3f39451a6b251b403e2703f27d8b05c52"
+    },
+    {
+      "repository": "mikefarah/yq",
+      "path": "recipes/mikefarah/yq.json",
+      "sha256": "2beaf2313a43e1c8ae48efe77ae0191d63fc8c548995271016736f35b8653e5e"
+    },
+    {
+      "repository": "sharkdp/fd",
+      "path": "recipes/sharkdp/fd.json",
+      "sha256": "00350ad03f3537af54d2f8193af02d9e2dc5f10f860bf00b667293cb5662f6d8"
+    }
+  ]
+}

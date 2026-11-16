@@ -1,0 +1,5 @@
+# Every path is owned by the project owner for now. Before any production
+# launch this MUST be replaced/extended with the two-role model (Registry
+# Steward + Security/Release Reviewer) required by decision-0002 in the zenget
+# repository (owner review, two-person review, license and budget gates).
+* @tyutyutyu

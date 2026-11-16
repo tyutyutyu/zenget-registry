@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "repository": "mikefarah/yq",
+  "supported_systems": [
+    "darwin/amd64",
+    "darwin/arm64",
+    "linux/386",
+    "linux/amd64",
+    "linux/arm",
+    "linux/arm64"
+  ],
+  "asset_selector": {
+    "version": 1,
+    "type": "regex",
+    "pattern": "^yq_(darwin|linux)_(386|amd64|arm|arm64)$"
+  }
+}

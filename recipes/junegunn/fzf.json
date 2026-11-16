@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "repository": "junegunn/fzf",
+  "supported_systems": [
+    "darwin/amd64",
+    "darwin/arm64",
+    "linux/amd64",
+    "linux/arm64"
+  ],
+  "asset_selector": {
+    "version": 1,
+    "type": "regex",
+    "pattern": "^fzf-[0-9]+\\.[0-9]+\\.[0-9]+-(linux|darwin)_(amd64|arm64)\\.tar\\.gz$"
+  },
+  "archive_binary": "fzf",
+  "checksum": {
+    "type": "regex",
+    "pattern": "^fzf_[0-9]+\\.[0-9]+\\.[0-9]+_checksums\\.txt$",
+    "format": "sha256sum"
+  }
+}

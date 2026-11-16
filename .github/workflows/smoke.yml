@@ -1,0 +1,126 @@
+name: smoke
+
+# Shared smoke-test workflow. It runs standalone (push/PR/schedule/dispatch)
+# and is also reused by update.yml via `workflow_call` with an explicit recipe
+# list. Three legs per recipe:
+#   1. debian:stable-slim  — glibc, amd64, native
+#   2. alpine:latest       — musl, amd64, native (busybox tar)
+#   3. debian:stable-slim  — glibc, arm64, QEMU emulated via binfmt
+
+on:
+  workflow_call:
+    inputs:
+      recipes:
+        required: false
+        type: string
+        default: ""
+        description: >-
+          JSON array of org/repo entries to smoke test. Empty means the
+          workflow detects the recipes from its own trigger.
+  push:
+    branches: [main]
+    paths:
+      - 'recipes/**'
+      - 'scripts/smoke.sh'
+      - '.github/workflows/smoke.yml'
+  pull_request:
+    paths:
+      - 'recipes/**'
+      - 'scripts/smoke.sh'
+      - '.github/workflows/smoke.yml'
+  workflow_dispatch:
+    inputs:
+      recipes:
+        required: false
+        type: string
+        default: ""
+        description: "Optional JSON array of org/repo entries to smoke test"
+  schedule:
+    # Weekly, Monday 03:23 UTC (off the :00/:30 herd minutes).
+    - cron: '23 3 * * 1'
+
+permissions:
+  contents: read
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    outputs:
+      recipes: ${{ steps.select.outputs.recipes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: select
+        name: Compute the recipe list
+        run: |
+          set -eu
+          ALL=$(python3 -c 'import json; print(json.dumps([e["repository"] for e in json.load(open("registry.json"))["entries"]]))')
+          INPUTS_RECIPES='${{ inputs.recipes }}'
+          EVENT_RECIPES='${{ github.event.inputs.recipes }}'
+          CHANGED=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin main
+            CHANGED=$(git diff --name-only origin/main...HEAD -- 'recipes/**')
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            BEFORE="${{ github.event.before }}"
+            if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+              CHANGED=$(git diff --name-only "$BEFORE"..HEAD -- 'recipes/**' || true)
+            fi
+          fi
+          if [ -n "$INPUTS_RECIPES" ]; then
+            echo "recipes=$INPUTS_RECIPES" >> "$GITHUB_OUTPUT"
+          elif [ -n "$EVENT_RECIPES" ]; then
+            echo "recipes=$EVENT_RECIPES" >> "$GITHUB_OUTPUT"
+          elif [ -n "$CHANGED" ]; then
+            echo "$CHANGED" | sed -n 's|^recipes/\([^/]*/[^/]*\)\.json$|\1|p' | sort -u \
+              | python3 -c 'import json,sys; print("recipes=" + json.dumps([l.strip() for l in sys.stdin if l.strip()]))' >> "$GITHUB_OUTPUT"
+          else
+            # schedule, dispatch without input, or a push with no recipe diff
+            echo "recipes=$ALL" >> "$GITHUB_OUTPUT"
+          fi
+
+  smoke-native:
+    needs: select
+    if: needs.select.outputs.recipes != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: debian:stable-slim
+            setup: apt-get update && apt-get install -y --no-install-recommends curl ca-certificates python3 unzip
+          - image: alpine:latest
+            setup: apk add --no-cache curl ca-certificates python3
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: ${{ matrix.setup }}
+      - name: Smoke test recipes
+        run: |
+          echo "$RECIPES" | python3 -c 'import json,sys; [print(r) for r in json.load(sys.stdin)]' \
+            | while IFS= read -r repo; do sh scripts/smoke.sh "$repo"; done
+        env:
+          RECIPES: ${{ needs.select.outputs.recipes }}
+
+  smoke-arm64:
+    needs: select
+    if: needs.select.outputs.recipes != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Smoke test recipes on linux/arm64 (QEMU emulated)
+        run: |
+          echo "$RECIPES" | python3 -c 'import json,sys; [print(r) for r in json.load(sys.stdin)]' \
+            | while IFS= read -r repo; do
+                docker run --rm --platform linux/arm64 -v "$PWD:/ws" -w /ws debian:stable-slim \
+                  sh -c "apt-get update && apt-get install -y --no-install-recommends curl ca-certificates python3 && sh scripts/smoke.sh $repo"
+              done
+        env:
+          RECIPES: ${{ needs.select.outputs.recipes }}

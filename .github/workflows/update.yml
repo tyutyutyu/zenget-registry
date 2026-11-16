@@ -1,0 +1,127 @@
+name: update
+
+# Scheduled updater: compare the upstream latest-release tag of every indexed
+# repository against registry-state.json, smoke test the changed (or never
+# tested) recipes with the shared smoke matrix, then open a PR refreshing
+# registry-state.json. Requires a real GitHub remote for the PR step; see
+# README.md ("Scheduled updater") for the pilot caveat.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Daily, 02:47 UTC (off the :00/:30 herd minutes).
+    - cron: '47 2 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      recipes: ${{ steps.detect.outputs.recipes }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect
+        name: Find recipes whose upstream tag changed (or were never tested)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 - <<'PYEOF' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          import urllib.request
+
+          index = json.load(open("registry.json", encoding="utf-8"))
+          try:
+              state = json.load(open("registry-state.json", encoding="utf-8"))
+          except FileNotFoundError:
+              state = {"schema_version": 1, "releases": {}}
+          known = state.get("releases", {})
+
+          token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+          stale = []
+          for entry in index["entries"]:
+              repo = entry["repository"]
+              request = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/releases/latest",
+                  headers={"Accept": "application/vnd.github+json",
+                           **({"Authorization": f"Bearer {token}"} if token else {})},
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      tag = json.load(response)["tag_name"]
+              except Exception as exc:  # network/HTTP errors: skip, not stale
+                  print(f"::warning::could not query {repo}: {exc}")
+                  continue
+              if known.get(repo, {}).get("tag") != tag:
+                  stale.append(repo)
+
+          print("recipes=" + json.dumps(sorted(stale)))
+          PYEOF
+
+  smoke:
+    needs: detect
+    if: needs.detect.outputs.recipes != '[]'
+    uses: ./.github/workflows/smoke.yml
+    with:
+      recipes: ${{ needs.detect.outputs.recipes }}
+
+  open-pr:
+    needs: [detect, smoke]
+    if: needs.detect.outputs.recipes != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Refresh registry-state.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 - <<'PYEOF'
+          import datetime
+          import json
+          import os
+          import urllib.request
+
+          index = json.load(open("registry.json", encoding="utf-8"))
+          state_path = "registry-state.json"
+          try:
+              state = json.load(open(state_path, encoding="utf-8"))
+          except FileNotFoundError:
+              state = {"schema_version": 1, "releases": {}}
+          state.setdefault("schema_version", 1)
+          releases = state.setdefault("releases", {})
+          token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+          today = datetime.date.today().isoformat()
+
+          for entry in index["entries"]:
+              repo = entry["repository"]
+              request = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/releases/latest",
+                  headers={"Accept": "application/vnd.github+json",
+                           **({"Authorization": f"Bearer {token}"} if token else {})},
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  tag = json.load(response)["tag_name"]
+              releases[repo] = {"tag": tag, "tested_at": today}
+
+          with open(state_path, "w", encoding="utf-8") as handle:
+              json.dump(state, handle, indent=2)
+              handle.write("\n")
+          PYEOF
+      - name: Commit, push and open PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          BRANCH="registry-update/$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          git add registry-state.json
+          git commit -m "chore: refresh registry-state.json after upstream smoke tests"
+          git push -u origin "$BRANCH"
+          gh pr create --title "chore: refresh registry-state.json" \
+            --body "Scheduled updater smoke-tested the changed upstream releases and refreshed the tested tags. Generated by .github/workflows/update.yml."

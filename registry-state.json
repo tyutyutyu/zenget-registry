@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "releases": {
+    "jqlang/jq": {
+      "tag": "jq-1.8.2",
+      "tested_at": "2026-09-12"
+    },
+    "junegunn/fzf": {
+      "tag": "v0.74.4",
+      "tested_at": "2026-09-12"
+    },
+    "mikefarah/yq": {
+      "tag": "v4.53.6",
+      "tested_at": "2026-09-12"
+    },
+    "sharkdp/fd": {
+      "tag": "v10.5.0",
+      "tested_at": "2026-09-12"
+    }
+  }
+}
