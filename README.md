@@ -17,6 +17,7 @@ schemas/recipe-v1.schema.json     JSON Schema mirror of the recipe contract
 recipes/<owner>/<repo>.json       one recipe per repository
 scripts/validate.py               stdlib-only recipe + index validator
 scripts/smoke.sh                  downloads the selected asset and runs the binary
+Taskfile.yml, .tasks/             task registry:validate, task registry:smoke, task dev:verify
 .github/workflows/                validate / smoke / update pipelines
 ```
 
