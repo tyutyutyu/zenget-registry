@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  validate:
+    desc: Validate every recipe and the registry index
+    dir: "{{.ROOT_DIR}}"
+    preconditions:
+      - sh: command -v python3
+        msg: python3 is not on PATH
+    cmds:
+      - python3 scripts/validate.py
+
+  smoke:
+    desc: "Smoke-test one recipe (RECIPE=<owner>/<repo> or recipes/<owner>/<repo>.json)"
+    dir: "{{.ROOT_DIR}}"
+    requires:
+      vars: [RECIPE]
+    cmds:
+      - scripts/smoke.sh "{{.RECIPE}}"

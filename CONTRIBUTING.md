@@ -5,7 +5,7 @@
 1. Create `recipes/<owner>/<repo>.json`. The path is derived from the
    `repository` field and vice versa — `scripts/validate.py` rejects any
    mismatch, so there is exactly one recipe file per repository.
-2. Run `python3 scripts/validate.py` from the repository root. It re-implements
+2. Run `python3 scripts/validate.py` (or `task dev:verify`) from the repository root. It re-implements
    the strict Go decoder contract (required fields, unknown-field rejection,
    null rejection for optional fields, platform enum + sorted + unique check,
    selector/checksum shape, `archive_binary`/`target_name` constraints,

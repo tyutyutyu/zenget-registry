@@ -1,0 +1,10 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+# Mirrors .github/workflows/validate.yml. The smoke test needs the network and
+# is not part of verification; run `task registry:smoke` for that.
+tasks:
+  verify:
+    cmds:
+      - task: :registry:validate
