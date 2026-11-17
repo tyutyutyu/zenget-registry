@@ -10,3 +10,19 @@ __pycache__/
 *.tar.xz
 *.tar.bz2
 *.zip
+
+# >>> github-manager: gitignore-baseline
+# dotenv environment variable files
+.env
+.env.*
+!.env.example
+
+# Claude Code - local configuration
+.claude/settings.local.json
+CLAUDE.local.md
+
+# ECC - temporary files
+.observer-tmp/
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+# <<< github-manager: gitignore-baseline
