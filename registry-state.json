@@ -3,19 +3,19 @@
   "releases": {
     "jqlang/jq": {
       "tag": "jq-1.8.2",
-      "tested_at": "2026-09-12"
+      "tested_at": "2026-11-21"
     },
     "junegunn/fzf": {
-      "tag": "v0.74.4",
-      "tested_at": "2026-09-12"
+      "tag": "v0.75.0",
+      "tested_at": "2026-11-21"
     },
     "mikefarah/yq": {
-      "tag": "v4.53.6",
-      "tested_at": "2026-09-12"
+      "tag": "v4.54.3",
+      "tested_at": "2026-11-21"
     },
     "sharkdp/fd": {
-      "tag": "v10.5.0",
-      "tested_at": "2026-09-12"
+      "tag": "v10.5.2",
+      "tested_at": "2026-11-21"
     }
   }
 }
